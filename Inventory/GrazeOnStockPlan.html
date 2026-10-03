@@ -1,0 +1,233 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GrazeOn Stock Plan</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --card:#fff; --ink:#1b1a17; --muted:#6d6a63; --line:#e3e0d9;
+    --accent:#8a3a12; --ok:#2f7a4a; --warn:#b4700f; --crit:#b3261e; --over:#5a6a8a;
+    --sub:#6b4ea8;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#16150f; --card:#201e18; --ink:#f0ece3; --muted:#a29c8f; --line:#332f26;
+           --accent:#e08a4a; --ok:#6bc48a; --warn:#e0a844; --crit:#ef7a70; --over:#93a4c4;
+           --sub:#b39ae0; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 16px 64px}
+  h1{font-size:22px;margin:0 0 2px;letter-spacing:-.01em}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:16px}
+  .card>h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+           margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:600}
+  .pad{padding:16px}
+
+  /* controls */
+  .ctl{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .f{display:flex;flex-direction:column;gap:4px}
+  .f label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .f input,.f select{background:var(--bg);color:var(--ink);border:1px solid var(--line);
+       border-radius:8px;padding:7px 9px;font:inherit;font-size:13px;min-width:86px}
+  .f.chk{flex-direction:row;align-items:center;gap:6px;padding-bottom:8px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 16px;
+         font:inherit;font-weight:600;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line);font-weight:500}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;
+         background:var(--line);border-radius:12px;overflow:hidden;border:1px solid var(--line)}
+  .stat{background:var(--card);padding:14px 16px}
+  .stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+  .stat .v{font-size:22px;font-weight:650;letter-spacing:-.02em;margin-top:3px}
+  .stat .n{font-size:12px;color:var(--muted)}
+
+  /* tables */
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:last-child td{border-bottom:0}
+  tfoot td{font-weight:650;border-top:2px solid var(--line);border-bottom:0}
+  .num{font-variant-numeric:tabular-nums}
+  .tag{display:inline-block;font-size:11px;font-weight:650;padding:2px 7px;border-radius:999px;
+       border:1px solid currentColor;line-height:1.5}
+  .s-critical{color:var(--crit)} .s-reorder{color:var(--warn)} .s-ok{color:var(--ok)}
+  .s-overstocked{color:var(--over)} .s-nodemand{color:var(--muted)}
+  tr.crit td:first-child{box-shadow:inset 3px 0 0 var(--crit)}
+  tr.warn td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+  .flavor{font-weight:600}
+  .bar{height:4px;border-radius:2px;background:var(--line);margin-top:5px;width:120px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--sub)}
+  .note{color:var(--muted);font-size:12px}
+  .alert{border-left:3px solid var(--crit);background:color-mix(in srgb,var(--crit) 7%,transparent);
+         padding:11px 14px;border-radius:0 8px 8px 0;margin:0 0 12px;font-size:13px}
+  .alert b{color:var(--crit)}
+  .scroll{overflow-x:auto}
+  .err{color:var(--crit);padding:16px;white-space:pre-wrap;font-size:13px}
+  .muted{color:var(--muted)}
+  @media (max-width:640px){ .stat .v{font-size:19px} }
+</style>
+
+<div class="wrap">
+  <h1>GrazeOn Stock Plan</h1>
+  <p class="sub" id="sub">Loading from Shopify…</p>
+
+  <div class="card"><div class="pad ctl">
+    <div class="f"><label for="lead">Lead time</label>
+      <input id="lead" type="number" min="1" max="365" value="30"></div>
+    <div class="f"><label for="cover">Cover after arrival</label>
+      <input id="cover" type="number" min="0" max="365" value="30"></div>
+    <div class="f"><label for="window">History window</label>
+      <input id="window" type="number" min="7" max="730" value="90"></div>
+    <div class="f"><label for="service">Service level</label>
+      <select id="service">
+        <option value="0.5">50% — no buffer</option>
+        <option value="0.8">80%</option>
+        <option value="0.9">90%</option>
+        <option value="0.95" selected>95%</option>
+        <option value="0.99">99%</option>
+      </select></div>
+    <div class="f"><label for="mode">Rate basis</label>
+      <select id="mode">
+        <option value="conservative" selected>Faster of the two</option>
+        <option value="window">Full window</option>
+        <option value="recent">Last 30 days</option>
+      </select></div>
+    <div class="f chk"><input id="growth" type="checkbox"><label for="growth">Apply trend</label></div>
+    <button id="go">Update</button>
+    <button id="refresh" class="ghost">Refetch Shopify</button>
+  </div></div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const n0 = v => (v==null?'—':Math.round(v).toLocaleString());
+const n2 = v => (v==null?'—':v.toFixed(2));
+const days = v => (v==null?'—':Math.round(v)+'d');
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function statusTag(s){
+  const cls = 's-'+s.replace(/\s+/g,'');
+  const label = {critical:'Order now', reorder:'Reorder', ok:'OK',
+                 overstocked:'Overstocked', 'no demand':'No sales'}[s] || s;
+  return `<span class="tag ${cls}">${label}</span>`;
+}
+const rowCls = s => s==='critical' ? 'crit' : (s==='reorder' ? 'warn' : '');
+
+function render(p){
+  const t = p.totals, s = p.settings;
+  const uncovered = t.sub_uncovered || [];
+  const parts = [];
+
+  parts.push(`<div class="stats">
+    <div class="stat"><div class="k">Selling</div><div class="v num">${n2(t.daily_rate)}<span class="n"> bags/day</span></div>
+      <div class="n">${n2(t.sub_daily_rate)} sub · ${n2(t.direct_daily_rate)} web · ${n2(t.wholesale_daily_rate)} wholesale</div></div>
+    <div class="stat"><div class="k">On hand</div><div class="v num">${n0(t.on_hand)}</div>
+      <div class="n">bags across ${p.finished.length} flavors</div></div>
+    <div class="stat"><div class="k">Need next ${p.horizon_days}d</div><div class="v num">${n0(t.demand_horizon)}</div>
+      <div class="n">${n0(t.sub_commit_horizon)} owed to subscribers</div></div>
+    <div class="stat"><div class="k">Order now</div><div class="v num">${n0(t.suggested_order)}</div>
+      <div class="n">bags · ${n0(t.pouch_order)} pouches</div></div>
+    <div class="stat"><div class="k">Flavors at risk</div><div class="v num">${t.at_risk}</div>
+      <div class="n">of ${p.finished.length}</div></div>
+  </div>`);
+
+  if (p.truncated_history) parts.push(`<div class="alert" style="margin-top:16px;border-left-color:var(--warn);
+    background:color-mix(in srgb,var(--warn) 7%,transparent)">
+    <b style="color:var(--warn)">Short history.</b> Asked Shopify for ${p.requested_window} days but only
+    ${p.history_days} came back, so rates are worked out over ${p.history_days} days.
+    Grant the <code>read_all_orders</code> scope to plan on a longer window.</div>`);
+
+  if (uncovered.length) parts.push(`<div class="alert" style="margin-top:16px">
+    <b>Subscriptions not covered.</b> At the current pace, ${esc(uncovered.join(', '))}
+    ${uncovered.length===1?'runs':'run'} out before a new order placed today would arrive
+    (${s.lead_time_days}-day lead time). These are bags already promised to active subscribers.</div>`);
+
+  // finished goods
+  parts.push(`<div class="card"><h2>Finished bags</h2><div class="scroll"><table>
+    <thead><tr>
+      <th>Flavor</th><th>On hand</th><th>Bags/day</th><th>Subscriber share</th>
+      <th>Cover</th><th>Runs out</th><th>Reorder at</th><th>Order</th><th>Status</th>
+    </tr></thead><tbody>` +
+    p.finished.map(r => {
+      const pct = Math.round((r.sub_share||0)*100);
+      const trend = r.trend ? `<div class="n muted">${r.trend>1?'▲':'▼'} ${r.trend.toFixed(2)}× vs prior 30d</div>` : '';
+      return `<tr class="${rowCls(r.status)}">
+        <td><div class="flavor">${esc(r.flavor)}</div>${trend}</td>
+        <td class="num">${n0(r.on_hand)}</td>
+        <td class="num">${n2(r.rate)}</td>
+        <td class="num">${pct}%<div class="bar"><i style="width:${pct}%"></i></div></td>
+        <td class="num">${days(r.days_cover)}</td>
+        <td class="num">${r.stockout_on ? esc(r.stockout_on) : '—'}</td>
+        <td class="num">${n0(r.reorder_point)}</td>
+        <td class="num"><b>${n0(r.suggested_order)}</b></td>
+        <td>${statusTag(r.status)}</td></tr>`;
+    }).join('') +
+    `</tbody><tfoot><tr><td>Total</td><td class="num">${n0(t.on_hand)}</td>
+      <td class="num">${n2(t.daily_rate)}</td><td></td><td></td><td></td><td></td>
+      <td class="num">${n0(t.suggested_order)}</td><td></td></tr></tfoot></table></div>
+    <div class="pad note">Order quantity covers ${s.lead_time_days} days of lead time plus
+      ${s.coverage_days} days of cover, with safety stock at a
+      ${Math.round(s.service_level*100)}% service level, less what is on hand.</div></div>`);
+
+  // packaging
+  const binding = p.packaging.filter(r => r.binding);
+  parts.push(`<div class="card"><h2>Printed pouches</h2><div class="scroll"><table>
+    <thead><tr><th>Flavor</th><th>On hand</th><th>Used in window</th><th>Cover</th>
+      <th>Need next ${p.horizon_days}d</th><th>Order</th><th>Status</th></tr></thead><tbody>` +
+    p.packaging.map(r => `<tr class="${rowCls(r.status)}">
+        <td><div class="flavor">${esc(r.flavor)}</div>${r.binding?'<div class="n muted">caps production before bags run out</div>':''}</td>
+        <td class="num">${n0(r.on_hand)}</td>
+        <td class="num">${n0(r.used_in_window)}</td>
+        <td class="num">${days(r.days_cover)}</td>
+        <td class="num">${n0(r.need_horizon)}</td>
+        <td class="num"><b>${n0(r.suggested_order)}</b></td>
+        <td>${statusTag(r.status)}</td></tr>`).join('') +
+    `</tbody></table></div><div class="pad note">Pouch cover is measured against how fast the
+      matching bag sells, so it answers "how long can we keep bagging this flavor".
+      ${binding.length ? 'Pouches run short before bags do for: <b>'+binding.map(r=>esc(r.flavor)).join(', ')+'</b>.' : ''}
+    </div></div>`);
+
+  const ex = Object.entries(p.excluded||{});
+  parts.push(`<div class="card"><div class="pad note">
+    Based on ${n0(p.orders_considered)} orders over ${p.history_days} days, as of ${esc(p.generated_at)}.
+    Variety packs are counted as their individual bags.
+    ${ex.length ? 'Left out of the sell-through rate: '+ex.map(([k,v])=>`${v} ${esc(k)}`).join(', ')+'.' : ''}
+    </div></div>`);
+
+  $('#out').innerHTML = parts.join('');
+  $('#sub').textContent = `${s.window_days}-day history · ${s.lead_time_days}-day lead time · updated ${p.generated_at}`;
+}
+
+async function load(refresh){
+  const btns = [$('#go'), $('#refresh')];
+  btns.forEach(b => b.disabled = true);
+  $('#sub').textContent = refresh ? 'Refetching from Shopify…' : 'Loading…';
+  const q = new URLSearchParams({
+    lead: $('#lead').value, cover: $('#cover').value, window: $('#window').value,
+    service: $('#service').value, mode: $('#mode').value,
+    growth: $('#growth').checked ? '1' : '0', refresh: refresh ? '1' : '0',
+  });
+  try{
+    const r = await fetch('/api/plan?'+q);
+    const p = await r.json();
+    if(p.error) throw new Error(p.error);
+    render(p);
+  }catch(e){
+    $('#out').innerHTML = `<div class="card"><div class="err">Could not build the plan.\n\n${esc(e.message)}</div></div>`;
+    $('#sub').textContent = 'Failed to load.';
+  }finally{
+    btns.forEach(b => b.disabled = false);
+  }
+}
+
+$('#go').addEventListener('click', () => load(false));
+$('#refresh').addEventListener('click', () => load(true));
+document.addEventListener('keydown', e => { if(e.key==='Enter') load(false); });
+load(false);
+</script>

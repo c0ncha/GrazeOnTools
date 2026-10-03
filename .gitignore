@@ -1,0 +1,7 @@
+# Credentials -- never commit. Matches config.json in any folder;
+# .githooks/pre-commit also refuses them if someone force-adds one.
+config.json
+
+.DS_Store
+__pycache__/
+*.pyc

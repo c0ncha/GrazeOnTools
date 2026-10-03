@@ -1,0 +1,10 @@
+#!/bin/sh
+# Refuse any commit that stages a config.json (they hold Shopify credentials).
+# Enable once per clone:  git config core.hooksPath .githooks
+bad=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)config\.json$')
+if [ -n "$bad" ]; then
+  echo "pre-commit: refusing to commit credentials file(s):" >&2
+  echo "$bad" | sed 's/^/  /' >&2
+  echo "Unstage with: git rm --cached <file>" >&2
+  exit 1
+fi
